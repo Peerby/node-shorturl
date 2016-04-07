@@ -111,6 +111,44 @@ var shorteners = {
 		shorteners['is.gd'](longurl, params, callback);
 	},
 
+	'shortswitch.com': function (longurl, params, callback) {
+		if ( !params.apiKey ) {
+			callback(new Error('shortswitch requires an apiKey for authorisation.'));
+			return;
+		}
+		var uri = 'https://api.shortswitch.com/shorten?' + querystring({
+			apiKey: params.apiKey,
+			longUrl: longurl,
+			format: 'json'
+		});
+		request({uri:uri}, function(error, response, body) {
+			if ( error ) {
+				return callback(new Error(error));
+			}
+
+			var json;
+			try {
+				json = JSON.parse(body);
+			} catch( e ) {
+				return callback(new Error('could not parse json'));
+			}
+
+			if ( !response || response.statusCode !== 200 ) {
+				if ( json.errorMessage ) {
+					return callback(new Error(json.errorMessage));
+				} else {
+					return callback(new Error('unknown error, status ' + response.statusCode));
+				}
+			}
+
+			if ( !json.results || !json.results[longurl] || !json.results[longurl].shortUrl ) {
+				return callback(new Error('unexpected response, expected shortUrl'));
+			}
+
+			callback(json.results[longurl].shortUrl);
+		});
+	},
+
 	'string': function(longurl, params, callback) {
 		if ( !('url' in params) ) {
 			callback();
